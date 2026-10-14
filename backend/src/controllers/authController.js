@@ -63,8 +63,9 @@ async function setupInitialOwner(req, res, next) {
 
     const passwordHash = await User.hashPassword(password);
     const owner = await User.create({
+      name: (fullName || username).trim(),
+      fullName: (fullName || username).trim(),
       username: username.toLowerCase().trim(),
-      fullName: fullName.trim(),
       email: email ? email.toLowerCase().trim() : undefined,
       passwordHash,
       role: ROLES.OWNER,

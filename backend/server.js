@@ -28,11 +28,26 @@ const PORT = process.env.PORT || 5000;
 
 // Middleware
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:5173',
+  origin: true,
   credentials: true,
 }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Serverless Database Connection Middleware (ensures DB is connected on Vercel)
+app.use(async (req, res, next) => {
+  if (req.path === '/api/health') return next();
+  try {
+    await initStoreDatabase();
+    next();
+  } catch (err) {
+    console.error('Database connection error in middleware:', err.message);
+    res.status(500).json({
+      success: false,
+      message: 'Database connection failed: ' + err.message,
+    });
+  }
+});
 
 if (process.env.NODE_ENV !== 'test') {
   app.use(morgan('dev'));
@@ -77,33 +92,43 @@ app.get('/', (req, res) => {
 // Centralized Error Handler
 app.use(errorHandler);
 
+let isStoreInitialized = false;
+
 // Database initialization and catalog auto-seeding helper
 async function initStoreDatabase() {
   await connectDB();
 
-  // Auto-seed initial store settings if not initialized
-  const settingCount = await Setting.countDocuments();
-  if (settingCount === 0) {
-    await Setting.create({
-      shopName: 'ShopEase POS',
-      tagline: 'Clothing & General Store',
-      address: 'Shop # 14, Commercial Plaza, Main Boulevard, Karachi',
-      phone: '+92 300 1234567',
-      receiptFooter: 'Thank you for shopping at ShopEase POS! Exchanges accepted within 7 days with receipt.',
-      currency: 'PKR',
-      currencySymbol: 'Rs.',
-      timezone: 'Asia/Karachi',
-      allowNegativeStock: false,
-      taxRate: 0,
-    });
-    console.log('✅ Initialized default ShopEase store settings.');
-  }
+  if (isStoreInitialized) return;
 
-  // Auto-seed complete retail catalog if catalog is missing items
-  const productCount = await Product.countDocuments();
-  if (productCount < PRODUCTS_DATA.length) {
-    console.log(`🌱 Detected ${productCount} products in database (catalog has ${PRODUCTS_DATA.length}). Ensuring all items are seeded...`);
-    await seedCatalog({ quiet: true });
+  try {
+    // Auto-seed initial store settings if not initialized
+    const settingCount = await Setting.countDocuments();
+    if (settingCount === 0) {
+      await Setting.create({
+        shopName: 'ShopEase POS',
+        tagline: 'Clothing & General Store',
+        address: 'Shop # 14, Commercial Plaza, Main Boulevard, Karachi',
+        phone: '+92 300 1234567',
+        receiptFooter: 'Thank you for shopping at ShopEase POS! Exchanges accepted within 7 days with receipt.',
+        currency: 'PKR',
+        currencySymbol: 'Rs.',
+        timezone: 'Asia/Karachi',
+        allowNegativeStock: false,
+        taxRate: 0,
+      });
+      console.log('✅ Initialized default ShopEase store settings.');
+    }
+
+    // Auto-seed complete retail catalog if catalog is missing items
+    const productCount = await Product.countDocuments();
+    if (productCount < PRODUCTS_DATA.length) {
+      console.log(`🌱 Detected ${productCount} products in database (catalog has ${PRODUCTS_DATA.length}). Ensuring all items are seeded...`);
+      await seedCatalog({ quiet: true });
+    }
+    isStoreInitialized = true;
+  } catch (err) {
+    console.error('Non-critical error during store auto-init/seeding:', err.message);
+    isStoreInitialized = true;
   }
 }
 
@@ -139,4 +164,7 @@ if (process.env.NODE_ENV !== 'test' && !process.env.VERCEL) {
   startServer();
 }
 
-module.exports = { app, startServer, initStoreDatabase };
+module.exports = app;
+module.exports.app = app;
+module.exports.startServer = startServer;
+module.exports.initStoreDatabase = initStoreDatabase;
