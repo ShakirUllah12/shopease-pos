@@ -19,14 +19,6 @@
     "mongoose": "^8.9.5",
     "morgan": "^1.10.0"
   },
-  "devDependencies": {
-    "mongodb-memory-server": "^10.1.4"
-  },
-  "config": {
-    "mongodbMemoryServer": {
-      "disablePostinstall": "1"
-    }
-  },
   "engines": {
     "node": ">=18.0.0"
   }

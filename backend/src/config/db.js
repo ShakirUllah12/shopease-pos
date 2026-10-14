@@ -1,6 +1,5 @@
 const mongoose = require('mongoose');
 
-let mongoMemoryServer = null;
 let supportsTransactions = false;
 
 /**
@@ -60,29 +59,8 @@ async function connectDB() {
       return mongoose.connection;
     } catch (error) {
       cachedPromise = null;
-      if (autoFallback) {
-        console.warn(`⚠️ Could not connect to primary MongoDB at ${uri} (${error.message}).`);
-        console.log('🚀 Initializing embedded In-Memory MongoDB for local development/testing...');
-        try {
-          const { MongoMemoryServer } = require('mongodb-memory-server');
-          mongoMemoryServer = await MongoMemoryServer.create({
-            instance: {
-              dbName: 'shopease_pos',
-            },
-          });
-          const memoryUri = mongoMemoryServer.getUri();
-          await mongoose.connect(memoryUri);
-          console.log(`✅ Connected to Embedded MongoDB: ${memoryUri}`);
-          await detectTransactionSupport();
-          return mongoose.connection;
-        } catch (memErr) {
-          console.error('❌ Failed to start embedded MongoDB:', memErr.message);
-          throw memErr;
-        }
-      } else {
-        console.error('❌ MongoDB Connection Error:', error.message);
-        throw error;
-      }
+      console.error('❌ MongoDB Connection Error:', error.message);
+      throw error;
     }
   })();
 
@@ -95,9 +73,6 @@ async function connectDB() {
 async function disconnectDB() {
   try {
     await mongoose.disconnect();
-    if (mongoMemoryServer) {
-      await mongoMemoryServer.stop();
-    }
     console.log('🛑 MongoDB disconnected cleanly.');
   } catch (err) {
     console.error('Error disconnecting MongoDB:', err);
