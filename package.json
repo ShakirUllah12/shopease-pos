@@ -9,6 +9,7 @@
     "build": "npm --prefix frontend run build",
     "seed": "npm --prefix backend run seed",
     "create-owner": "npm --prefix backend run create-owner",
+    "generate-license": "npm --prefix backend run generate-license --",
     "test": "npm --prefix backend test"
   },
   "dependencies": {

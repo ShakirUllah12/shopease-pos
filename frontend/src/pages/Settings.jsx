@@ -8,12 +8,18 @@ import {
   Save,
   Clock,
   Coins,
+  ShieldCheck,
+  Key,
+  Copy,
 } from 'lucide-react';
 import api from '../api/client';
 import { useNotification } from '../context/NotificationContext';
+import { useLicense } from '../context/LicenseContext';
 
 export default function Settings() {
   const notify = useNotification();
+  const { license, isTrial, openActivationModal } = useLicense();
+  const [copiedMid, setCopiedMid] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -216,6 +222,115 @@ export default function Settings() {
           </button>
         </div>
       </form>
+
+      {/* Software License & Offline Evaluation Section */}
+      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div className="flex items-center gap-2">
+            <Key className="w-4 h-4 text-brand-600" />
+            <h3 className="font-bold text-slate-900 text-sm">Software License & Offline Evaluation</h3>
+          </div>
+          {license.isLicensed ? (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+              <ShieldCheck className="w-3.5 h-3.5" />
+              Perpetual Offline License
+            </span>
+          ) : isTrial ? (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
+              <Clock className="w-3.5 h-3.5 text-amber-600" />
+              3-Day Trial: {license.daysRemaining}d {license.hoursRemaining}h remaining
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200">
+              Trial Expired
+            </span>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+          {/* Machine Hardware ID */}
+          <div className="space-y-1.5">
+            <label className="block font-semibold text-slate-700">Hardware / Machine ID</label>
+            <div className="flex items-center gap-2">
+              <div className="flex-1 bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 font-mono font-bold text-slate-800 tracking-wider text-xs">
+                {license.machineId || 'Loading...'}
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  if (license.machineId) {
+                    navigator.clipboard.writeText(license.machineId);
+                    setCopiedMid(true);
+                    setTimeout(() => setCopiedMid(false), 2000);
+                    notify.info('Machine ID copied to clipboard');
+                  }
+                }}
+                className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-3 py-2 rounded-xl transition-colors flex items-center gap-1 shrink-0"
+              >
+                {copiedMid ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Copied</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3.5 h-3.5" />
+                    <span>Copy</span>
+                  </>
+                )}
+              </button>
+            </div>
+            <p className="text-[11px] text-slate-400">
+              Unique offline fingerprint for this terminal. Share with your vendor for key generation.
+            </p>
+          </div>
+
+          {/* License Status / Details */}
+          <div className="space-y-1.5">
+            <label className="block font-semibold text-slate-700">Registration Details</label>
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-1 text-slate-600 text-[11px]">
+              <div className="flex justify-between">
+                <span>Status:</span>
+                <strong className={license.isLicensed ? 'text-emerald-700' : 'text-amber-700'}>
+                  {license.isLicensed ? 'Full License Active' : '3-Day Free Evaluation'}
+                </strong>
+              </div>
+              {license.clientName && (
+                <div className="flex justify-between">
+                  <span>Registered To:</span>
+                  <strong className="text-slate-800">{license.clientName}</strong>
+                </div>
+              )}
+              {license.trialEndDate && !license.isLicensed && (
+                <div className="flex justify-between">
+                  <span>Trial Expires:</span>
+                  <strong className="text-slate-800">
+                    {new Date(license.trialEndDate).toLocaleDateString()} ({license.daysRemaining} days left)
+                  </strong>
+                </div>
+              )}
+              <div className="flex justify-between">
+                <span>Network Requirement:</span>
+                <strong className="text-slate-700">100% Offline (No Internet Needed)</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="pt-2 flex items-center justify-between border-t border-slate-100">
+          <p className="text-[11px] text-slate-400">
+            Need to activate a new terminal or extend your license? Enter the key provided by your developer.
+          </p>
+          <button
+            type="button"
+            onClick={openActivationModal}
+            className="inline-flex items-center gap-1.5 bg-brand-600 hover:bg-brand-700 text-white font-bold px-4 py-2 rounded-xl text-xs transition-all shadow-sm shadow-brand-500/20"
+          >
+            <Key className="w-3.5 h-3.5" />
+            <span>{license.isLicensed ? 'Manage / Change License Key' : 'Enter Offline Activation Key'}</span>
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

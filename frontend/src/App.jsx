@@ -3,7 +3,9 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 import { NotificationProvider } from './context/NotificationContext';
+import { LicenseProvider } from './context/LicenseContext';
 import Layout from './components/Layout';
+import LicenseActivationModal from './components/LicenseActivationModal';
 
 // Pages
 import Login from './pages/Login';
@@ -73,9 +75,11 @@ export default function App() {
   return (
     <BrowserRouter>
       <NotificationProvider>
-        <AuthProvider>
-          <CartProvider>
-            <Routes>
+        <LicenseProvider>
+          <AuthProvider>
+            <CartProvider>
+              <LicenseActivationModal />
+              <Routes>
               {/* Public Auth Route */}
               <Route
                 path="/login"
@@ -223,7 +227,8 @@ export default function App() {
             </Routes>
           </CartProvider>
         </AuthProvider>
-      </NotificationProvider>
+      </LicenseProvider>
+    </NotificationProvider>
     </BrowserRouter>
   );
 }

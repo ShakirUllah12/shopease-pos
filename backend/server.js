@@ -22,6 +22,8 @@ const dashboardRoutes = require('./src/routes/dashboardRoutes');
 const settingRoutes = require('./src/routes/settingRoutes');
 const customerRoutes = require('./src/routes/customerRoutes');
 const shiftRoutes = require('./src/routes/shiftRoutes');
+const licenseRoutes = require('./src/routes/licenseRoutes');
+const licenseGuard = require('./src/middleware/licenseGuard');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -68,6 +70,11 @@ app.get('/api/health', (req, res) => {
 
 // Mount API Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/license', licenseRoutes);
+
+// License and 3-Day Offline Trial Enforcer
+app.use(licenseGuard);
+
 app.use('/api/categories', categoryRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/stock', stockRoutes);

@@ -23,6 +23,10 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    if (error.response && error.response.status === 403 && error.response.data?.licenseBlocked) {
+      window.dispatchEvent(new CustomEvent('shopease:license_blocked', { detail: error.response.data }));
+    }
+
     if (error.response && error.response.status === 401) {
       const isAuthRoute = error.config.url.includes('/auth/login') || error.config.url.includes('/auth/setup');
       if (!isAuthRoute) {

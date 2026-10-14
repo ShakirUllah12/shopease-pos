@@ -8,6 +8,7 @@
     "dev": "node --watch server.js",
     "seed": "node src/scripts/seed.js",
     "create-owner": "node src/scripts/createOwner.js",
+    "generate-license": "node src/scripts/generateLicense.js",
     "test": "node --test tests/**/*.test.js"
   },
   "dependencies": {

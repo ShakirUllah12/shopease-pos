@@ -1,3 +1,4 @@
+require('dotenv').config();
 const mongoose = require('mongoose');
 
 let supportsTransactions = false;
@@ -31,6 +32,7 @@ async function detectTransactionSupport() {
 }
 
 let cachedPromise = null;
+let memoryServer = null;
 
 /**
  * Connect to MongoDB with automated fallback to in-memory server if local mongod is not running.
@@ -45,19 +47,37 @@ async function connectDB() {
   }
 
   const uri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/shopease_pos';
-  const autoFallback = process.env.AUTO_FALLBACK_IN_MEMORY_DB === 'true';
+  const autoFallback = process.env.AUTO_FALLBACK_IN_MEMORY_DB !== 'false' || process.env.NODE_ENV === 'test';
 
   cachedPromise = (async () => {
     try {
       console.log(`🔌 Attempting connection to MongoDB at: ${uri}`);
       await mongoose.connect(uri, {
-        serverSelectionTimeoutMS: 10000,
-        connectTimeoutMS: 10000,
+        serverSelectionTimeoutMS: 2000,
+        connectTimeoutMS: 2000,
       });
       console.log(`✅ Connected to MongoDB: ${mongoose.connection.host}:${mongoose.connection.port}/${mongoose.connection.name}`);
       await detectTransactionSupport();
       return mongoose.connection;
     } catch (error) {
+      if (autoFallback) {
+        console.warn(`⚠️ Standard MongoDB unavailable (${error.message}). Initializing embedded in-memory database...`);
+        try {
+          const { MongoMemoryServer } = require('mongodb-memory-server');
+          if (!memoryServer) {
+            memoryServer = await MongoMemoryServer.create();
+          }
+          const memoryUri = memoryServer.getUri();
+          console.log(`🚀 Embedded MongoMemoryServer active at: ${memoryUri}`);
+          await mongoose.connect(memoryUri);
+          supportsTransactions = false;
+          return mongoose.connection;
+        } catch (memErr) {
+          cachedPromise = null;
+          console.error('❌ Failed to start embedded in-memory MongoDB:', memErr.message);
+          throw memErr;
+        }
+      }
       cachedPromise = null;
       console.error('❌ MongoDB Connection Error:', error.message);
       throw error;
@@ -73,6 +93,11 @@ async function connectDB() {
 async function disconnectDB() {
   try {
     await mongoose.disconnect();
+    if (memoryServer) {
+      await memoryServer.stop();
+      memoryServer = null;
+    }
+    cachedPromise = null;
     console.log('🛑 MongoDB disconnected cleanly.');
   } catch (err) {
     console.error('Error disconnecting MongoDB:', err);
