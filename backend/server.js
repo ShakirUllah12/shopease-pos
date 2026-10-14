@@ -1,4 +1,6 @@
 require('dotenv').config();
+const path = require('path');
+const fs = require('fs');
 const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
@@ -88,13 +90,23 @@ app.use('/api/settings', settingRoutes);
 app.use('/api/customers', customerRoutes);
 app.use('/api/shifts', shiftRoutes);
 
-// Root greeting
-app.get('/', (req, res) => {
-  res.json({
-    message: 'ShopEase POS API Service',
-    health: '/api/health',
+// Serve static frontend build in production / offline desktop mode
+const frontendDistPath = path.join(__dirname, '../frontend/dist');
+if (fs.existsSync(frontendDistPath)) {
+  app.use(express.static(frontendDistPath));
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api')) return next();
+    res.sendFile(path.join(frontendDistPath, 'index.html'));
   });
-});
+} else {
+  // Root greeting fallback for API-only dev mode
+  app.get('/', (req, res) => {
+    res.json({
+      message: 'ShopEase POS API Service',
+      health: '/api/health',
+    });
+  });
+}
 
 // Centralized Error Handler
 app.use(errorHandler);
