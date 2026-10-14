@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
+  <defs>
+    <linearGradient id="grad192" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#15803d" />
+      <stop offset="100%" stop-color="#166534" />
+    </linearGradient>
+  </defs>
+  <rect width="192" height="192" rx="42" fill="url(#grad192)" />
+  <g fill="none" stroke="#ffffff" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" transform="translate(24, 28) scale(0.28)">
+    <circle cx="160" cy="420" r="32" fill="#ffffff" />
+    <circle cx="380" cy="420" r="32" fill="#ffffff" />
+    <path d="M40 40h60l48 240h260l40-160H130" stroke="#ffffff" stroke-width="28" />
+    <line x1="200" y1="160" x2="200" y2="240" stroke="#ffffff" stroke-width="12" />
+    <line x1="230" y1="160" x2="230" y2="240" stroke="#ffffff" stroke-width="8" />
+    <line x1="260" y1="160" x2="260" y2="240" stroke="#ffffff" stroke-width="20" />
+    <line x1="300" y1="160" x2="300" y2="240" stroke="#ffffff" stroke-width="10" />
+    <line x1="330" y1="160" x2="330" y2="240" stroke="#ffffff" stroke-width="16" />
+    <line x1="370" y1="160" x2="370" y2="240" stroke="#ffffff" stroke-width="12" />
+  </g>
+</svg>
