@@ -24,6 +24,11 @@
   "devDependencies": {
     "concurrently": "^9.1.2"
   },
+  "config": {
+    "mongodbMemoryServer": {
+      "disablePostinstall": "1"
+    }
+  },
   "author": "ShopEase POS Team",
   "license": "ISC"
 }

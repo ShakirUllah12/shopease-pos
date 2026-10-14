@@ -16,11 +16,17 @@
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "jsonwebtoken": "^9.0.2",
-    "mongodb-memory-server": "^10.1.4",
     "mongoose": "^8.9.5",
     "morgan": "^1.10.0"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "mongodb-memory-server": "^10.1.4"
+  },
+  "config": {
+    "mongodbMemoryServer": {
+      "disablePostinstall": "1"
+    }
+  },
   "engines": {
     "node": ">=18.0.0"
   }
