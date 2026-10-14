@@ -12,9 +12,10 @@ const MASTER_SECRET = process.env.LICENSE_MASTER_SECRET || 'SHOPEASE_POS_OFFLINE
 const TRIAL_DURATION_DAYS = 3;
 const TRIAL_DURATION_MS = TRIAL_DURATION_DAYS * 24 * 60 * 60 * 1000;
 
-// Disk persistence paths (ensures trial cannot be reset by simply wiping MongoDB)
-const MACHINE_ID_PATH = path.join(__dirname, '../../.shopease_machine.id');
-const LICENSE_FILE_PATH = path.join(__dirname, '../../.shopease_license.json');
+// Disk persistence paths (uses /tmp on Vercel serverless, or root on local)
+const baseDir = process.env.VERCEL ? os.tmpdir() : path.join(__dirname, '../..');
+const MACHINE_ID_PATH = path.join(baseDir, '.shopease_machine.id');
+const LICENSE_FILE_PATH = path.join(baseDir, '.shopease_license.json');
 
 /**
  * Generates or retrieves a permanent, stable unique Machine Hardware ID
