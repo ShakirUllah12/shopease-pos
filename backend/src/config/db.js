@@ -46,24 +46,36 @@ async function connectDB() {
     return cachedPromise;
   }
 
-  const uri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/shopease_pos';
-  const autoFallback = process.env.AUTO_FALLBACK_IN_MEMORY_DB !== 'false' || process.env.NODE_ENV === 'test' || !process.env.MONGODB_URI;
+  const isVercel = Boolean(process.env.VERCEL);
+  const uri = process.env.MONGODB_URI || (isVercel ? '' : 'mongodb://127.0.0.1:27017/shopease_pos');
+  const autoFallback = !isVercel && (process.env.AUTO_FALLBACK_IN_MEMORY_DB !== 'false' || process.env.NODE_ENV === 'test' || !process.env.MONGODB_URI);
+
+  if (isVercel && !uri) {
+    const vErr = new Error('MONGODB_URI is missing in Vercel Environment Variables. Please add your MongoDB Atlas connection string in Vercel Settings -> Environment Variables.');
+    console.error('❌ ' + vErr.message);
+    throw vErr;
+  }
 
   cachedPromise = (async () => {
     try {
-      console.log(`🔌 Attempting connection to MongoDB at: ${uri}`);
+      console.log(`🔌 Attempting connection to MongoDB at: ${uri.replace(/\/\/[^:]+:[^@]+@/, '//***:***@')}`);
       await mongoose.connect(uri, {
-        serverSelectionTimeoutMS: 2000,
-        connectTimeoutMS: 2000,
+        serverSelectionTimeoutMS: 8000,
+        connectTimeoutMS: 10000,
       });
       console.log(`✅ Connected to MongoDB: ${mongoose.connection.host}:${mongoose.connection.port}/${mongoose.connection.name}`);
       await detectTransactionSupport();
       return mongoose.connection;
     } catch (error) {
       if (autoFallback) {
-        console.warn(`⚠️ Standard MongoDB unavailable (${error.message}). Initializing embedded in-memory database...`);
+        console.warn(`⚠️ Standard MongoDB unavailable (${error.message}). Checking embedded database...`);
         try {
-          const { MongoMemoryServer } = require('mongodb-memory-server');
+          let MongoMemoryServer;
+          try {
+            MongoMemoryServer = require('mongodb-memory-server').MongoMemoryServer;
+          } catch (modErr) {
+            throw new Error(`Could not connect to MongoDB (${error.message}). Please ensure MongoDB is running or MONGODB_URI is configured.`);
+          }
           if (!memoryServer) {
             memoryServer = await MongoMemoryServer.create();
           }
