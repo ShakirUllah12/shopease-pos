@@ -42,6 +42,15 @@ async function authenticate(req, res, next) {
       });
     }
 
+    // Single active session enforcement: notify if signed in on another terminal
+    if (decoded.sessionId && user.activeSessionId && decoded.sessionId !== user.activeSessionId) {
+      return res.status(401).json({
+        success: false,
+        sessionTerminated: true,
+        message: 'Your session was closed because this account was signed into on another terminal.',
+      });
+    }
+
     req.user = user;
     next();
   } catch (error) {

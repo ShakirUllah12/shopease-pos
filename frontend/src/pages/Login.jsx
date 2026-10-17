@@ -155,9 +155,25 @@ export default function Login() {
             </button>
           </form>
 
+          {/* Quick Demo Credentials Helper */}
+          <div className="mt-4 pt-4 border-t border-slate-700/80 flex items-center justify-between text-xs">
+            <span className="text-slate-400">Default Account: <strong className="text-white font-mono">owner</strong> / <strong className="text-white font-mono">Owner@123456</strong></span>
+            <button
+              type="button"
+              onClick={() => {
+                setUsername('owner');
+                setPassword('Owner@123456');
+                setIsSetupMode(false);
+              }}
+              className="text-brand-400 hover:text-brand-300 font-bold underline text-[11px]"
+            >
+              Autofill
+            </button>
+          </div>
+
           {/* Quick toggle for dev if system wasn't initialized */}
           {!isInitialized && (
-            <div className="mt-4 pt-4 border-t border-slate-700 text-center">
+            <div className="mt-3 text-center">
               <button
                 type="button"
                 onClick={() => setIsSetupMode(!isSetupMode)}

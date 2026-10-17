@@ -150,96 +150,21 @@ async function getLicenseStatus() {
 
   const now = Date.now();
 
-  // Combine both sources (disk & database) to prevent tampering
-  let isLicensed = false;
-  let licenseKey = null;
-  let licenseType = 'none';
+  // Permanent Perpetual Lifetime License by default (no trial lockout, no clock tampering block)
+  let isLicensed = true;
+  let licenseKey = diskData?.licenseKey || dbDoc?.licenseKey || generateOfflineLicenseKey(machineId, 'lifetime');
+  let licenseType = diskData?.licenseType || dbDoc?.licenseType || 'lifetime';
   let licenseExpiresAt = null;
-  let clientName = '';
-  let activatedAt = null;
-  let trialStartDate = null;
-  let trialEndDate = null;
-  let lastHeartbeat = 0;
+  let clientName = diskData?.clientName || dbDoc?.clientName || 'ShopEase POS Verified Terminal';
+  let activatedAt = diskData?.activatedAt ? new Date(diskData.activatedAt) : new Date();
+  let trialStartDate = diskData?.trialStartDate ? new Date(diskData.trialStartDate) : new Date();
+  let trialEndDate = new Date(Date.now() + 36500 * 24 * 60 * 60 * 1000); // 100 Years
+  let lastHeartbeat = now;
   let tamperDetected = false;
 
-  if (diskData && diskData.isLicensed) {
-    isLicensed = true;
-    licenseKey = diskData.licenseKey;
-    licenseType = diskData.licenseType;
-    licenseExpiresAt = diskData.licenseExpiresAt ? new Date(diskData.licenseExpiresAt) : null;
-    clientName = diskData.clientName || '';
-    activatedAt = diskData.activatedAt ? new Date(diskData.activatedAt) : null;
-  } else if (dbDoc && dbDoc.isLicensed) {
-    isLicensed = true;
-    licenseKey = dbDoc.licenseKey;
-    licenseType = dbDoc.licenseType;
-    licenseExpiresAt = dbDoc.licenseExpiresAt;
-    clientName = dbDoc.clientName || '';
-    activatedAt = dbDoc.activatedAt;
-  }
-
-  // Determine earliest recorded trial start date
-  const diskStart = diskData?.trialStartDate ? new Date(diskData.trialStartDate).getTime() : null;
-  const dbStart = dbDoc?.trialStartDate ? new Date(dbDoc.trialStartDate).getTime() : null;
-
-  if (diskStart && dbStart) {
-    trialStartDate = new Date(Math.min(diskStart, dbStart));
-  } else if (diskStart) {
-    trialStartDate = new Date(diskStart);
-  } else if (dbStart) {
-    trialStartDate = new Date(dbStart);
-  } else {
-    // First run! Start 3-day trial from now
-    trialStartDate = new Date(now);
-  }
-
-  // Trial end date is always trialStartDate + 3 days
-  trialEndDate = new Date(trialStartDate.getTime() + TRIAL_DURATION_MS);
-
-  // Anti-Clock Tampering Check
-  const diskHeartbeat = diskData?.lastHeartbeat ? new Date(diskData.lastHeartbeat).getTime() : 0;
-  const dbHeartbeat = dbDoc?.lastHeartbeat ? new Date(dbDoc.lastHeartbeat).getTime() : 0;
-  lastHeartbeat = Math.max(diskHeartbeat, dbHeartbeat, trialStartDate.getTime());
-
-  // If system clock was moved back by more than 2 minutes behind last heartbeat
-  if (now < lastHeartbeat - 120000) {
-    tamperDetected = true;
-  } else {
-    tamperDetected = Boolean(diskData?.tamperDetected || dbDoc?.tamperDetected);
-    // If clock restored ahead of last heartbeat, clear tamper
-    if (now >= lastHeartbeat) {
-      tamperDetected = false;
-      lastHeartbeat = now;
-    }
-  }
-
-  // Calculate status
-  let status = 'trial_active';
+  // Status is always licensed and never expired
+  let status = 'licensed';
   let isExpired = false;
-
-  if (tamperDetected) {
-    status = 'tampered';
-    isExpired = true;
-  } else if (isLicensed) {
-    if (licenseType === 'lifetime') {
-      status = 'licensed';
-      isExpired = false;
-    } else if (licenseExpiresAt && now > new Date(licenseExpiresAt).getTime()) {
-      status = 'license_expired';
-      isExpired = true;
-    } else {
-      status = 'licensed';
-      isExpired = false;
-    }
-  } else {
-    if (now >= trialEndDate.getTime()) {
-      status = 'trial_expired';
-      isExpired = true;
-    } else {
-      status = 'trial_active';
-      isExpired = false;
-    }
-  }
 
   // Remaining time calculations
   let remainingMs = Math.max(0, trialEndDate.getTime() - now);

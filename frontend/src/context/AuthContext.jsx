@@ -81,11 +81,17 @@ export function AuthProvider({ children }) {
   };
 
   // Logout handler
-  const logout = () => {
-    localStorage.removeItem('shopease_token');
-    localStorage.removeItem('shopease_user');
-    setToken(null);
-    setUser(null);
+  const logout = async () => {
+    try {
+      await api.post('/auth/logout');
+    } catch (e) {
+      // Ignore errors if offline
+    } finally {
+      localStorage.removeItem('shopease_token');
+      localStorage.removeItem('shopease_user');
+      setToken(null);
+      setUser(null);
+    }
   };
 
   const isOwner = user?.role === 'owner';

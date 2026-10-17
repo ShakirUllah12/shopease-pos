@@ -10,6 +10,7 @@ router.post('/login', authController.login);
 
 // Protected endpoints (Staff: Owner and Cashier)
 router.get('/me', authenticate, authController.getProfile);
+router.post('/logout', authenticate, authController.logout);
 router.put('/change-password', authenticate, authController.changePassword);
 
 // Owner-only endpoints

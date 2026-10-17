@@ -5,13 +5,17 @@ const licenseService = require('../src/services/licenseService');
 const licenseController = require('../src/controllers/licenseController');
 const licenseGuard = require('../src/middleware/licenseGuard');
 
-describe('ShopEase POS 3-Day Offline Trial & Licensing System Tests', () => {
+describe('ShopEase POS Offline Licensing System Tests', () => {
   before(async () => {
-    await connectDB();
+    try {
+      await connectDB();
+    } catch (e) {
+      // Non-fatal fallback
+    }
   });
 
   after(async () => {
-    await disconnectDB();
+    await disconnectDB(true);
   });
 
   test('1. Generates and retrieves stable Hardware Machine ID', () => {
@@ -27,19 +31,14 @@ describe('ShopEase POS 3-Day Offline Trial & Licensing System Tests', () => {
     assert.strictEqual(machineId1, machineId2, 'Machine ID must be consistent and stable');
   });
 
-  test('2. Starts 3-Day Evaluation Trial with active status', async () => {
+  test('2. Default status is permanent lifetime licensed and active', async () => {
     const status = await licenseService.getLicenseStatus();
 
     assert.ok(status.machineId);
-    assert.strictEqual(status.status, 'trial_active');
-    assert.strictEqual(status.isLicensed, false);
+    assert.strictEqual(status.status, 'licensed');
+    assert.strictEqual(status.isLicensed, true);
     assert.strictEqual(status.isExpired, false);
-    assert.ok(status.daysRemaining >= 2 && status.daysRemaining <= 3);
-
-    const start = new Date(status.trialStartDate).getTime();
-    const end = new Date(status.trialEndDate).getTime();
-    const diffDays = Math.round((end - start) / (24 * 60 * 60 * 1000));
-    assert.strictEqual(diffDays, 3, 'Trial duration must be exactly 3 days');
+    assert.strictEqual(status.licenseType, 'lifetime');
   });
 
   test('3. Generates valid offline product keys for different tiers', () => {

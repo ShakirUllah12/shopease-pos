@@ -1,13 +1,15 @@
+const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const { ROLES } = require('../config/constants');
 
-function generateToken(user) {
+function generateToken(user, sessionId = null) {
   return jwt.sign(
     {
       id: user._id,
       username: user.username,
       role: user.role,
+      sessionId: sessionId || user.activeSessionId,
     },
     process.env.JWT_SECRET || 'shopease_pos_super_secret_jwt_key_2026_secure',
     {
@@ -70,9 +72,12 @@ async function setupInitialOwner(req, res, next) {
       passwordHash,
       role: ROLES.OWNER,
       isActive: true,
+      isLoggedIn: true,
+      activeSessionId: crypto.randomUUID(),
+      lastActiveAt: new Date(),
     });
 
-    const token = generateToken(owner);
+    const token = generateToken(owner, owner.activeSessionId);
 
     res.status(201).json({
       success: true,
@@ -86,11 +91,11 @@ async function setupInitialOwner(req, res, next) {
 }
 
 /**
- * User Login
+ * User Login with Single Active Session Protection
  */
 async function login(req, res, next) {
   try {
-    const { username, password } = req.body;
+    const { username, password, forceLogoutOthers } = req.body;
 
     if (!username || !password) {
       return res.status(400).json({
@@ -123,10 +128,16 @@ async function login(req, res, next) {
       });
     }
 
+    // Rotate session: Generate a fresh active session ID so only 1 session per user is active at a time
+
+    const sessionId = crypto.randomUUID();
+    user.isLoggedIn = true;
+    user.activeSessionId = sessionId;
+    user.lastActiveAt = new Date();
     user.lastLogin = new Date();
     await user.save();
 
-    const token = generateToken(user);
+    const token = generateToken(user, sessionId);
 
     res.json({
       success: true,
@@ -140,9 +151,33 @@ async function login(req, res, next) {
 }
 
 /**
+ * Sign out current authenticated user and clear active session
+ */
+async function logout(req, res, next) {
+  try {
+    if (req.user) {
+      await User.findByIdAndUpdate(req.user._id, {
+        isLoggedIn: false,
+        activeSessionId: null,
+      });
+    }
+    res.json({
+      success: true,
+      message: 'Signed out successfully.',
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
  * Get current authenticated user
  */
 async function getProfile(req, res) {
+  if (req.user) {
+    // Keep session active timestamp fresh
+    User.findByIdAndUpdate(req.user._id, { lastActiveAt: new Date() }).catch(() => {});
+  }
   res.json({
     success: true,
     user: req.user,
@@ -298,6 +333,7 @@ module.exports = {
   checkSetupStatus,
   setupInitialOwner,
   login,
+  logout,
   getProfile,
   changePassword,
   createUser,

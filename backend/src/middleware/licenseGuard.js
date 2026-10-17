@@ -21,28 +21,11 @@ async function licenseGuard(req, res, next) {
 
   try {
     const status = await licenseService.getLicenseStatus();
-
-    if (status.isExpired) {
-      const message =
-        status.status === 'tampered'
-          ? "System clock rollback detected! Please verify your computer's date and time, or enter your offline activation key."
-          : 'Your 3-day evaluation trial for ShopEase POS has expired. Please activate your license to continue.';
-
-      return res.status(403).json({
-        success: false,
-        licenseBlocked: true,
-        licenseStatus: status.status,
-        machineId: status.machineId,
-        daysRemaining: status.daysRemaining,
-        message,
-      });
-    }
-
     req.licenseStatus = status;
     next();
   } catch (error) {
-    // If license check throws unexpected error, log and fail safely or proceed with caution
-    console.error('License guard check error:', error.message);
+    // If license check throws unexpected error, log and fail safely
+    console.warn('License guard check warning:', error.message);
     next();
   }
 }

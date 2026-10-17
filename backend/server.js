@@ -8,6 +8,8 @@ const { connectDB, disconnectDB, isTransactionsSupported } = require('./src/conf
 const errorHandler = require('./src/middleware/errorHandler');
 const Product = require('./src/models/Product');
 const Setting = require('./src/models/Setting');
+const User = require('./src/models/User');
+const { ROLES } = require('./src/config/constants');
 const { seedCatalog, PRODUCTS_DATA } = require('./src/scripts/seedCatalog');
 
 // Route Handlers
@@ -138,10 +140,26 @@ async function initStoreDatabase() {
       console.log('✅ Initialized default ShopEase store settings.');
     }
 
+    // Auto-seed default Owner account if no users exist
+    const userCount = await User.countDocuments();
+    if (userCount === 0) {
+      const passwordHash = await User.hashPassword('Owner@123456');
+      await User.create({
+        username: 'owner',
+        name: 'ShopEase Administrator',
+        fullName: 'ShopEase Administrator',
+        email: 'owner@shopease.local',
+        passwordHash,
+        role: ROLES.OWNER,
+        isActive: true,
+      });
+      console.log('✅ Created default Owner account (owner / Owner@123456).');
+    }
+
     // Auto-seed complete retail catalog if catalog is missing items
     const productCount = await Product.countDocuments();
-    if (productCount < PRODUCTS_DATA.length) {
-      console.log(`🌱 Detected ${productCount} products in database (catalog has ${PRODUCTS_DATA.length}). Ensuring all items are seeded...`);
+    if (productCount === 0) {
+      console.log(`🌱 Empty catalog detected. Seeding full retail catalog (${PRODUCTS_DATA.length} products)...`);
       await seedCatalog({ quiet: true });
     }
     isStoreInitialized = true;

@@ -18,6 +18,7 @@ import {
   Camera,
   QrCode,
   Users,
+  Package,
 } from 'lucide-react';
 import api from '../api/client';
 import { useCart } from '../context/CartContext';
@@ -57,6 +58,14 @@ export default function POS() {
   // Barcode and Scanner Modals
   const [isCameraScannerOpen, setIsCameraScannerOpen] = useState(false);
   const [isQRModalOpen, setIsQRModalOpen] = useState(false);
+  const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
+  const [quickName, setQuickName] = useState('');
+  const [quickCategory, setQuickCategory] = useState('');
+  const [quickPrice, setQuickPrice] = useState('');
+  const [quickCost, setQuickCost] = useState('');
+  const [quickStock, setQuickStock] = useState('10');
+  const [quickBarcode, setQuickBarcode] = useState('');
+  const [isSubmittingQuickProduct, setIsSubmittingQuickProduct] = useState(false);
 
   // Variant modal state for Clothing
   const [activeProductForVariants, setActiveProductForVariants] = useState(null);
@@ -238,6 +247,65 @@ export default function POS() {
     }
   };
 
+  // Handle Quick Add Product from POS Terminal
+  const handleQuickAddProduct = async (e) => {
+    e.preventDefault();
+    if (!quickName.trim()) {
+      notify.error('Product title is required');
+      return;
+    }
+    if (!quickPrice || Number(quickPrice) <= 0) {
+      notify.error('Selling price must be greater than 0');
+      return;
+    }
+
+    setIsSubmittingQuickProduct(true);
+    try {
+      const catId = quickCategory || (categories[0]?._id);
+      const generatedSku = 'SKU-' + Math.floor(1000 + Math.random() * 9000);
+      const payload = {
+        name: quickName.trim(),
+        categoryId: catId,
+        isClothing: false,
+        trackStock: true,
+        variants: [
+          {
+            sku: generatedSku,
+            variantName: 'Default',
+            sellingPrice: Number(quickPrice),
+            costPrice: Number(quickCost) || 0,
+            initialStock: Number(quickStock) || 0,
+            minStockAlert: 2,
+            barcode: (quickBarcode || '').trim(),
+          },
+        ],
+      };
+
+      const res = await api.post('/products', payload);
+      if (res.data?.success) {
+        notify.success(`Product "${quickName}" added to catalog!`);
+        playSuccessTone();
+        // Reset quick add form
+        setQuickName('');
+        setQuickPrice('');
+        setQuickCost('');
+        setQuickStock('10');
+        setQuickBarcode('');
+        setIsQuickAddOpen(false);
+
+        // Refresh products list
+        const refreshRes = await api.get(`/products/pos-search?query=${encodeURIComponent(searchQuery)}`);
+        if (refreshRes.data?.products) {
+          setProducts(refreshRes.data.products);
+        }
+      }
+    } catch (err) {
+      notify.error(err.response?.data?.message || err.message || 'Failed to add product');
+    } finally {
+      setIsSubmittingQuickProduct(false);
+    }
+  };
+
   // Open checkout modal & prep default payment amount to match totalAmount
   const handleOpenCheckout = () => {
     if (cartItems.length === 0) {
@@ -350,6 +418,16 @@ export default function POS() {
             >
               <Camera className="w-4 h-4" />
               <span className="hidden sm:inline">Camera Scan</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setIsQuickAddOpen(true)}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs shadow-xs transition-colors shrink-0"
+              title="Quickly add new shop product (نیا پروڈکٹ درج کریں)"
+            >
+              <Plus className="w-4 h-4" />
+              <span>+ New Product</span>
             </button>
           </div>
 
@@ -855,6 +933,139 @@ export default function POS() {
           storeSettings={storeSettings}
           onClose={() => setCompletedSale(null)}
         />
+      )}
+
+      {/* Quick Add Product Modal */}
+      {isQuickAddOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden animate-in fade-in zoom-in-95">
+            <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-brand-100 text-brand-700 flex items-center justify-center font-bold">
+                  <Package className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-sm">Quick Add New Product</h3>
+                  <p className="text-[11px] text-slate-500">نیا پروڈکٹ درج کریں (دکان میں فوری فروخت کیلئے)</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsQuickAddOpen(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-200"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleQuickAddProduct} className="p-4 space-y-3 text-xs">
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Product Name / Title * (پروڈکٹ کا نام)
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Polo T-Shirt, Cooking Oil 1L, etc."
+                  value={quickName}
+                  onChange={(e) => setQuickName(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:outline-none focus:border-brand-500 font-semibold"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">
+                    Category (شعبہ)
+                  </label>
+                  <select
+                    value={quickCategory}
+                    onChange={(e) => setQuickCategory(e.target.value)}
+                    className="w-full px-2.5 py-2 bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:outline-none font-medium"
+                  >
+                    {categories.map((c) => (
+                      <option key={c._id} value={c._id}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">
+                    Barcode (اختیاری)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Scan / Type Barcode"
+                    value={quickBarcode}
+                    onChange={(e) => setQuickBarcode(e.target.value)}
+                    className="w-full px-2.5 py-2 bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:outline-none font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">
+                    Sale Price (فروخت) *
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    required
+                    placeholder="Rs."
+                    value={quickPrice}
+                    onChange={(e) => setQuickPrice(e.target.value)}
+                    className="w-full px-2.5 py-2 bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:outline-none font-bold text-brand-700"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">
+                    Cost Price (خرید)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="Rs."
+                    value={quickCost}
+                    onChange={(e) => setQuickCost(e.target.value)}
+                    className="w-full px-2.5 py-2 bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:outline-none text-slate-600"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">
+                    Stock (تعداد)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="Qty"
+                    value={quickStock}
+                    onChange={(e) => setQuickStock(e.target.value)}
+                    className="w-full px-2.5 py-2 bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:outline-none font-semibold text-slate-800"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-slate-200 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsQuickAddOpen(false)}
+                  className="px-4 py-2 border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold rounded-xl"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingQuickProduct}
+                  className="px-5 py-2 bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white font-bold rounded-xl shadow-md shadow-brand-500/25 transition-all"
+                >
+                  {isSubmittingQuickProduct ? 'Saving...' : 'Save Product & Ready to Sell'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -5,18 +5,18 @@ const LicenseContext = createContext(null);
 
 export function LicenseProvider({ children }) {
   const [license, setLicense] = useState({
-    status: 'trial_active',
-    isLicensed: false,
+    status: 'licensed',
+    isLicensed: true,
     isExpired: false,
     machineId: '',
-    daysRemaining: 3,
-    hoursRemaining: 0,
-    minutesRemaining: 0,
+    daysRemaining: 9999,
+    hoursRemaining: 9999,
+    minutesRemaining: 9999,
     trialStartDate: null,
     trialEndDate: null,
     tamperDetected: false,
-    clientName: '',
-    licenseType: 'none',
+    clientName: 'ShopEase POS Lifetime Edition',
+    licenseType: 'lifetime',
   });
   const [loading, setLoading] = useState(true);
   const [showActivationModal, setShowActivationModal] = useState(false);
@@ -28,9 +28,6 @@ export function LicenseProvider({ children }) {
       if (res.data?.success && res.data.license) {
         const l = res.data.license;
         setLicense(l);
-        if (l.isExpired || l.tamperDetected) {
-          setShowActivationModal(true);
-        }
       }
     } catch (err) {
       console.warn('License status check failed (operating in offline fallback):', err.message);
@@ -45,23 +42,8 @@ export function LicenseProvider({ children }) {
     // Check status periodically (every 60 seconds)
     const interval = setInterval(fetchStatus, 60000);
 
-    // Listen for 403 License Blocked events dispatched by API client interceptor
-    const handleLicenseBlocked = (e) => {
-      const detail = e.detail || {};
-      setLicense((prev) => ({
-        ...prev,
-        isExpired: true,
-        status: detail.licenseStatus || 'trial_expired',
-        machineId: detail.machineId || prev.machineId,
-      }));
-      setShowActivationModal(true);
-    };
-
-    window.addEventListener('shopease:license_blocked', handleLicenseBlocked);
-
     return () => {
       clearInterval(interval);
-      window.removeEventListener('shopease:license_blocked', handleLicenseBlocked);
     };
   }, [fetchStatus]);
 
