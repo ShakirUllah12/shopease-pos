@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import JsBarcode from 'jsbarcode';
 import {
   Printer,
@@ -16,9 +17,19 @@ import api from '../api/client';
 import { formatCurrency } from '../utils/formatters';
 
 export default function BarcodeGenerator() {
+  const location = useLocation();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
+
+  // Auto-search product if navigated from catalog with state
+  useEffect(() => {
+    if (location.state?.sku) {
+      setSearch(location.state.sku);
+    } else if (location.state?.productName) {
+      setSearch(location.state.productName);
+    }
+  }, [location.state]);
 
   // Selected item configuration
   const [selectedVariant, setSelectedVariant] = useState(null);

@@ -15,7 +15,9 @@ import {
   Eye,
   EyeOff,
   Info,
+  Barcode,
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import api from '../api/client';
 import { useNotification } from '../context/NotificationContext';
 import { formatPKR, formatDateTime } from '../utils/formatters';
@@ -404,6 +406,14 @@ export default function Products() {
                             >
                               <Info className="w-3.5 h-3.5" />
                             </button>
+                            <Link
+                              to="/barcode-generator"
+                              state={{ productName: p.name, sku: p.variants?.[0]?.sku }}
+                              title="Print Barcode Price Stickers (بارکوڈ اسٹیکر پرنٹ کریں)"
+                              className="p-1.5 text-slate-500 hover:text-brand-600 hover:bg-slate-100 rounded-lg transition-colors"
+                            >
+                              <Barcode className="w-3.5 h-3.5" />
+                            </Link>
                             <button
                               onClick={() => handleOpenEditModal(p)}
                               title="Edit Product & Variants"
